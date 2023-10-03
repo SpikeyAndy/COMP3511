@@ -2,8 +2,8 @@
     COMP3511 Fall 2023
     PA1: Simplified Linux Shell (MyShell)
 
-    Your name: LUI, Cheuk Kwan Andy
-    Your ITSC email: ckalui@connect.ust.hk
+    Your name:
+    Your ITSC email:           @connect.ust.hk
 
     Declaration:
 
@@ -125,8 +125,7 @@ void read_tokens(char **argv, char *line, int *numTokens, char *delimiter)
 void process_cmd(char *command_line)
 {
     // Uncomment this line to check the cmdline content
-    printf("Debug: The command line is [%s]\n", command_line);
-    
+    // printf("Debug: The command line is [%s]\n", command_line);
 }
 
 /* The main function implementation */
@@ -135,13 +134,13 @@ int main()
     // TODO: replace the shell prompt with your ITSC account name
     // For example, if you ITSC account is cspeter@connect.ust.hk
     // You should replace ITSC with cspeter
-    char *prompt = "ckalui";
+    char *prompt = "ITSC";
     char command_line[MAX_CMDLINE_LENGTH];
 
     // TODO:
     // The main function needs to be modified
     // For example, you need to handle the exit command inside the main function
-
+    
     printf(TEMPLATE_MYSHELL_START, getpid());
 
     // The main event loop
@@ -149,30 +148,20 @@ int main()
     {
 
         printf("%s> ", prompt);
-           
-        if (strcmp(command_line, "exit") == 0) {
-            printf(TEMPLATE_MYSHELL_END, getpid());
-            exit(0);
-        }
-
         if (get_cmd_line(command_line) == -1)
             continue; /* empty line handling */
 
-        else {
-            pid_t pid = fork();
-            if (pid == 0)
-            {
-                // the child process handles the command
-                process_cmd(command_line);
-                // exit(0);
-            }
-            else
-            {
-                // the parent process simply wait for the child and do nothing
-                wait(0);
-            }
+        pid_t pid = fork();
+        if (pid == 0)
+        {
+            // the child process handles the command
+            process_cmd(command_line);
         }
-
+        else
+        {
+            // the parent process simply wait for the child and do nothing
+            wait(0);
+        }
     }
 
     return 0;
