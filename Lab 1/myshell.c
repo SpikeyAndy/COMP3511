@@ -122,40 +122,112 @@ void read_tokens(char **argv, char *line, int *numTokens, char *delimiter)
     *numTokens = argc;
 }
 
-void process_cmd(char *command_line)
-{
-    // Uncomment this line to check the cmdline content
-    printf("Debug: The command line is [%s]\n", command_line);
+void process_cmd(char *command_line) {
+    //printf("Debug: The command line is [%s]\n", command_line);
+
+    for (int i = 0; command_line[i] != '\0'; i++) { //- replaced all the tabs with space to remove.
+        if (command_line[i] == '\t') {
+            command_line[i] = ' ';
+        }
+    }
+
     int numseg;
     char *pipe_segments[MAX_PIPE_SEGMENTS] = {NULL};
     read_tokens(pipe_segments, command_line, &numseg, "|");
     pipe_segments[numseg] = NULL;
-    for (int i = 0; i < numseg; i++) {
-        char *arg_segments[MAX_ARGUMENTS] = {NULL}; // character array buffer to store the pipe segements
-        int numarg; // an output integer to store the number of pipe segment parsed by this function
 
-        read_tokens(arg_segments, &command_line[i], &numarg, " "); // pipe (command)
-        // for (int j = 0; j < numarg; j++)  { //
-        //     printf(arg_segments[i], "\n"); // pipe (command)
-        // }
+    int pfds[MAX_PIPE_SEGMENTS - 1][2]; // Pipe file descriptors
+    for (int i = 0; i < numseg - 1; i++) {
+
+        if (pipe(pfds[i]) == -1) {
+            perror("pipe failed");
+            exit(1);
+        }
+    }
+
+    for (int i = 0; i < numseg; i++) {
+        char *arg_segments[MAX_ARGUMENTS] = {NULL};
+        int numarg;
+
+        read_tokens(arg_segments, pipe_segments[i], &numarg, " ");
         arg_segments[numarg] = NULL;
 
-        for (int i = 0; i < numarg; i++) {
+        pid_t pid = fork();
 
-            if (strcmp(arg_segments[i], ">") == 0) {
-                 
+        if (pid == 0) { // Child process
+            if (i != 0) {
+                // Redirect the standard input to the read end of the previous pipe
+                dup2(pfds[i - 1][0], 0);
+                close(pfds[i - 1][0]);
+                close(pfds[i - 1][1]);
             }
 
-            else if (strcmp(arg_segments[i], "<") == 0) {
-            
+            if (i != numseg - 1) {
+                // Redirect the standard output to the write end of the current pipe
+                dup2(pfds[i][1], 1);
+                close(pfds[i][0]);
+                close(pfds[i][1]);
             }
 
-            else {
-                execvp(arg_segments[0], arg_segments);
+            // Check for input/output redirection
+            for (int j = 0; arg_segments[j] != NULL; j++) {
+                if (strcmp(arg_segments[j], "<") == 0) {
+                    // Input redirection
+                    if (arg_segments[j + 1] != NULL) {
+                        int input_fd = open(arg_segments[j + 1], O_RDONLY);
+                        if (input_fd == -1) {
+                            perror("open input file failed");
+                            exit(1);
+                        }
+                        dup2(input_fd, 0);
+                        close(input_fd);
+                        arg_segments[j] = NULL; // Remove input redirection symbol
+                    } else {
+                        fprintf(stderr, "Missing input file\n");
+                        exit(1);
+                    }
+                } else if (strcmp(arg_segments[j], ">") == 0) {
+                    // Output redirection
+                    if (arg_segments[j + 1] != NULL) {
+                        int output_fd = open(arg_segments[j + 1], O_WRONLY | O_CREAT | O_TRUNC, 0666);
+                        if (output_fd == -1) {
+                            perror("open output file failed");
+                            exit(1);
+                        }
+                        dup2(output_fd, 1);
+                        close(output_fd);
+                        arg_segments[j] = NULL; // Remove output redirection symbol
+                    } else {
+                        fprintf(stderr, "Missing output file\n");
+                        exit(1);
+                    }
+                }
+            }
+
+            execvp(arg_segments[0], arg_segments);
+            perror("exec failed");
+            exit(1);
+        } 
+        
+        else { // Parent process
+            if (i != 0) {
+                close(pfds[i - 1][0]);
+                close(pfds[i - 1][1]);
             }
         }
-        
     }
+
+    // Close all pipe file descriptors in the parent process
+    for (int i = 0; i < numseg - 1; i++) {
+        close(pfds[i][0]);
+        close(pfds[i][1]);
+    }
+
+    // Wait for all child processes to finish
+    for (int i = 0; i < numseg; i++) {
+        wait(NULL);
+    }
+
 }
 
 void ctrl_handling() {
@@ -197,6 +269,7 @@ int main()
         {
             // the child process handles the command
             process_cmd(command_line);
+            exit(0);
         }
         else
         {

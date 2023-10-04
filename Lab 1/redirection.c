@@ -123,10 +123,12 @@ void read_tokens(char **argv, char *line, int *numTokens, char *delimiter)
 }
 
 
-void process_cmd(char* command_line) {
+void process_cmd(char *command_line) {
+    printf("Debug: The command line is [%s]\n", command_line);
     int numseg;
-    char* pipe_segments[MAX_PIPE_SEGMENTS] = { NULL };
+    char *pipe_segments[MAX_PIPE_SEGMENTS] = {NULL};
     read_tokens(pipe_segments, command_line, &numseg, "|");
+    pipe_segments[numseg] = NULL;
 
     int pfds[MAX_PIPE_SEGMENTS - 1][2]; // Pipe file descriptors
     for (int i = 0; i < numseg - 1; i++) {
@@ -136,42 +138,78 @@ void process_cmd(char* command_line) {
         }
     }
 
-    for (int i = 0; i < numseg; i++) {
-        char* arg_segments[MAX_ARGUMENTS] = { NULL };
-        int numarg;
-
-        // Create a copy of the pipe segment to avoid modifying the original string
-        char pipe_segment_copy[MAX_PIPE_SEGMENTS];
-        strncpy(pipe_segment_copy, pipe_segments[i], MAX_CMDLINE_LENGTH);
-        pipe_segment_copy[MAX_CMDLINE_LENGTH - 1] = NULL;
-
-        // Replace all tabs in the copy with spaces
-        for (int j = 0; j < strlen(pipe_segment_copy); j++) {
-            if (pipe_segment_copy[j] == '\t') {
-                pipe_segment_copy[j] = ' ';
+    for (int j = 0; j < strlen(command_line); j++) { // replace all tabs with spaces
+            if (command_line[j] == '\t') {
+                command_line[j] = ' ';
             }
         }
 
-        read_tokens(arg_segments, pipe_segment_copy, &numarg, " ");
+    for (int i = 0; i < numseg; i++) {
+        char *arg_segments[MAX_ARGUMENTS] = {NULL};
+        int numarg;
 
+        
+        read_tokens(arg_segments, pipe_segments[i], &numarg, " ");
         arg_segments[numarg] = NULL;
+
+        int input_fd = 0;
+        int output_fd = 1;
+
+        if (i != 0) {
+            // Redirect the standard input to the read end of the previous pipe
+            input_fd = pfds[i - 1][0];
+            close(pfds[i - 1][0]);
+            close(pfds[i - 1][1]);
+        }
+
+        if (i != numseg - 1) {
+            // Redirect the standard output to the write end of the current pipe
+            output_fd = pfds[i][1];
+            close(pfds[i][0]);
+            close(pfds[i][1]);
+        }
+
+         // Check for input/output redirection
+            for (int j = 0; arg_segments[j] != NULL; j++) {
+                if (strcmp(arg_segments[j], "<") == 0) {
+                    // Input redirection
+                    if (arg_segments[j + 1] != NULL) {
+                        int input_fd = open(arg_segments[j + 1], O_RDONLY);
+                        if (input_fd == -1) {
+                            perror("open input file failed");
+                            exit(1);
+                        }
+                        dup2(input_fd, 0);
+                        close(input_fd);
+                        arg_segments[j] = NULL; // Remove input redirection symbol
+                    } else {
+                        fprintf(stderr, "Missing input file\n");
+                        exit(1);
+                    }
+                } else if (strcmp(arg_segments[j], ">") == 0) {
+                    // Output redirection
+                    if (arg_segments[j + 1] != NULL) {
+                        int output_fd = open(arg_segments[j + 1], O_WRONLY | O_CREAT | O_TRUNC, 0666);
+                        if (output_fd == -1) {
+                            perror("open output file failed");
+                            exit(1);
+                        }
+                        dup2(output_fd, 1);
+                        close(output_fd);
+                        arg_segments[j] = NULL; // Remove output redirection symbol
+                    } else {
+                        fprintf(stderr, "Missing output file\n");
+                        exit(1);
+                    }
+                }
+            }
 
         pid_t pid = fork();
 
         if (pid == 0) { // Child process
-            if (i != 0) {
-                // Redirect the standard input to the read end of the previous pipe
-                dup2(pfds[i - 1][0], 0);
-                close(pfds[i - 1][0]);
-                close(pfds[i - 1][1]);
-            }
-
-            if (i != numseg - 1) {
-                // Redirect the standard output to the write end of the current pipe
-                dup2(pfds[i][1], 1);
-                close(pfds[i][0]);
-                close(pfds[i][1]);
-            }
+            // Redirect the standard input/output as needed
+            dup2(input_fd, 0);
+            dup2(output_fd, 1);
 
             execvp(arg_segments[0], arg_segments);
             perror("exec failed");

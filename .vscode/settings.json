@@ -1,0 +1,18 @@
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/.dSYM": true,
+        "**/.vscode": true,
+        "Lab 1/*.*": false,
+        "Lab 1/redirection": true,
+        "test": true,
+        "Lab 1/test": true,
+        "**/*.dSYM": true
+    },
+    "explorerExclude.backup": {}
+}
