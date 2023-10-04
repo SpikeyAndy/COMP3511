@@ -1,13 +1,1 @@
-demo.txt
-myshell
-myshell.c
-myshell.dSYM
-myshell2
-myshell2.dSYM
-output
-output.txt
-redirection
-redirection.c
-test
-test.c
-test3
+      13      13     130

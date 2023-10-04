@@ -8,7 +8,6 @@
         "**/Thumbs.db": true,
         "**/.dSYM": true,
         "**/.vscode": true,
-        "Lab 1/*.*": false,
         "Lab 1/redirection": true,
         "test": true,
         "Lab 1/test": true,
