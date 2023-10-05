@@ -1,0 +1,15 @@
+total 384
+-rw-r--r--  1 andylui  staff     8B Oct  3 15:17 demo.txt
+-rwxr-xr-x@ 1 andylui  staff    34K Oct  5 00:43 myshell
+-rw-r--r--  1 andylui  staff   8.1K Oct  5 00:43 myshell.c
+drwxr-xr-x@ 3 andylui  staff    96B Oct  1 16:27 myshell.dSYM
+-rwxr-xr-x  1 andylui  staff    34K Oct  3 21:50 myshell2
+-rw-r--r--  1 andylui  staff   7.7K Oct  4 16:45 myshell2.c
+drwxr-xr-x@ 3 andylui  staff    96B Oct  3 16:51 myshell2.dSYM
+drwxr-xr-x  4 andylui  staff   128B Oct  3 21:35 output
+-rw-r--r--  1 andylui  staff    25B Oct  4 16:58 output.txt
+-rwxr-xr-x  1 andylui  staff    34K Oct  5 00:32 redirection
+-rw-r--r--  1 andylui  staff   8.3K Oct  4 16:45 redirection.c
+-rwxr-xr-x  1 andylui  staff    34K Oct  5 00:31 test
+-rw-r--r--  1 andylui  staff   6.8K Oct  4 14:29 test.c
+-rw-r--r--  1 andylui  staff     0B Oct  5 00:44 tmp_out_only.txt

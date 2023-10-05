@@ -124,31 +124,16 @@ void read_tokens(char **argv, char *line, int *numTokens, char *delimiter)
 
 void process_cmd(char *command_line) {
     //printf("Debug: The command line is [%s]\n", command_line);
-    int j = 0;
-    char *better_command_line =  (char*)malloc((MAX_CMDLINE_LENGTH*2) * sizeof(char));
 
     for (int i = 0; command_line[i] != '\0'; i++) { //- replaced all the tabs with space to remove.
-        if (command_line[i] == '\t' ) {
-            better_command_line[j++] = ' ';
-        }
-        else if (command_line[i] == '<') {
-            better_command_line[j++] = ' ';
-            better_command_line[j++] = '<';
-            better_command_line[j++] = ' ';
-        }
-        else if (command_line[i] == '>') {
-            better_command_line[j++] = ' ';
-            better_command_line[j++] = '>';
-            better_command_line[j++] = ' ';
-        }
-        else {
-            better_command_line[j++] = command_line[i];
+        if (command_line[i] == '\t') {
+            command_line[i] = ' ';
         }
     }
 
     int numseg;
     char *pipe_segments[MAX_PIPE_SEGMENTS] = {NULL};
-    read_tokens(pipe_segments, better_command_line, &numseg, "|");
+    read_tokens(pipe_segments, command_line, &numseg, "|");
     pipe_segments[numseg] = NULL;
 
     int pfds[MAX_PIPE_SEGMENTS - 1][2]; // Pipe file descriptors
@@ -159,7 +144,7 @@ void process_cmd(char *command_line) {
             exit(1);
         }
     }
-    
+
     for (int i = 0; i < numseg; i++) {
         char *arg_segments[MAX_ARGUMENTS] = {NULL};
         int numarg;
@@ -243,7 +228,6 @@ void process_cmd(char *command_line) {
     for (int i = 0; i < numseg; i++) {
         wait(NULL);
     }
-    
 
 }
 
