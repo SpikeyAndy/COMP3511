@@ -118,7 +118,7 @@ void read_tokens(char **argv, char *line, int *numTokens, char *delimiter)
     {
         argv[argc++] = token;
         token = strtok(NULL, delimiter);
-    }
+    } 
     *numTokens = argc;
 }
 
