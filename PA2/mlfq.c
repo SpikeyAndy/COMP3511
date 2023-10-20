@@ -47,9 +47,9 @@ struct Process {
 };
 
 //todo: create queue with process table
-    struct Process q0[MAX_GANTT_CHART];
-    struct Process q1[MAX_GANTT_CHART];
-    struct Process fcfs[MAX_GANTT_CHART];
+    struct Process q0[MAX_NUM_PROCESS];
+    struct Process q1[MAX_NUM_PROCESS];
+    struct Process fcfs[MAX_NUM_PROCESS];
     int q0_length = 0;
     int q1_length = 0;
     int fcfs_length = 0;
@@ -238,10 +238,9 @@ void add_queue(struct Process *q, struct Process *new_process, int *queue_size) 
     (*queue_size)++;
 
     // Print a message indicating the process has been added
-    printf("Process %s added to the queue.\n", q[*queue_size].name);
 }
 
-void move_queue(struct Process item, struct Process *dest, int *dest_size, struct Process *src, int *src_size) {
+void move_queue(struct Process *dest, int *dest_size, struct Process *src, int *src_size) {
     // Check if the source queue is empty
     if (*src_size == 0) {
         printf("ERROR: Source queue is empty. Cannot move process.\n");
@@ -254,29 +253,15 @@ void move_queue(struct Process item, struct Process *dest, int *dest_size, struc
         return;
     }
 
-    // Find the index of the item in the source queue
-    int item_index = -1;
-    for (int i = 0; i < *src_size; i++) {
-        if (src[i].name == item.name) {
-            item_index = i;
-            break;
-        }
-    }
-
-    // Check if the item was found in the source queue
-    if (item_index == -1) {
-        printf("ERROR: Process not found in the source queue.\n");
-        return;
-    }
-
     // Move the item from the source queue to the destination queue
-    add_queue(dest, &dest[item_index], dest_size);
+    add_queue(dest, &src[0], dest_size);
     
+    //printf("Move: Adding %s\n", src[0].name);
     // Shift the remaining processes in the source queue (MUST be removed only: cannot use dequeue because it will cause mutual recursion)
     dequeue(src, src_size);
-
+    
     // Print a message indicating the process has been moved
-    printf("Process %s moved to the destination queue.\n", item.name);
+    //printf("Process %s moved to the destination queue.\n", src[0].name);
 }
 
 void item_init(struct GanttChartItem *item, char name[MAX_PROCESS_NAME], int duration) {
@@ -296,19 +281,15 @@ void mlfq() {
     int chart_size = 0;
 
     // TODO: implement your MLFQ algorithm here
-    int num_process = 0;
+    int num_process = process_table_size;
     int time = 0;
 
-
-    for (int i = 0; i < MAX_NUM_PROCESS; i++) { //* num_process = count number of processes
-        if (process_table[i].burst_time == 0) {
-            num_process = i;
-            break;
-        }
-    }
     for (int i = 0; i < num_process; i++) { //* time = sum of burst time
         time = time + process_table[i].burst_time; 
     }
+
+    // printf("%d\n", num_process);
+    // printf("%d\n", time);
 
     //todo: run through time and check which queue to run process
     for (int real_time = 0; real_time < time; real_time++) {
@@ -318,10 +299,12 @@ void mlfq() {
             if (process_table[process_id].arrival_time == real_time) {  // for interrupts of q0
                 process_table[process_id].remain_time = tq0;
                 add_queue(q0, &process_table[process_id], &q0_length);
+                break;
             }
         }
 
         struct GanttChartItem item;
+        //gantt_chart_print(gantt_chart, chart_size);
 
         //todo: if q0 has processes lined up
         if (q0_length > 0) {
@@ -329,65 +312,49 @@ void mlfq() {
             q0[0].remain_time--; // deduct remaining time in the queue
             q0[0].burst_time--; // deduct remaining time to burst CPU time
 
-            
+            gantt_chart_update(gantt_chart, &chart_size, q0[0].name, 1);
+
 
             if (q0[0].burst_time == 0) {
-                gantt_chart[chart_size] = item;
-                chart_size++; // tracking chart index
                 dequeue(q0, &q0_length); 
             }
             else if (q0[0].remain_time == 0) {
                 q0[0].remain_time = tq1;
-                gantt_chart[chart_size] = item;
-                chart_size++; // tracking chart index
-                move_queue(q0[0], q1, &q1_length, q0, &q0_length);
-            }
-            else {
-                gantt_chart_update(gantt_chart, &chart_size, q0[0].name, item.duration + 1);
+                move_queue(q1, &q1_length, q0, &q0_length);
             }
             
             continue;
         }
         
         //todo: if q1 has processes lined up only when q0 is empty
-        else if (q1_length > 0 && q0_length == 0) {
+        else if (q1_length > 0) {
             item_init(&item, q1[0].name, 0);
             q1[0].remain_time--; // deduct remaining time in the queue
             q1[0].burst_time--;
 
-            
+            gantt_chart_update(gantt_chart, &chart_size, q1[0].name, 1);
+
                   
             if (q1[0].burst_time == 0) {
-                gantt_chart[chart_size] = item;
-                chart_size++; // tracking chart index
                 dequeue(q1, &q1_length); 
             }
             else if (q1[0].remain_time == 0) {
-                q1[0].remain_time = q1[0].burst_time;
-                gantt_chart[chart_size] = item;
-                chart_size++; // tracking chart index
-                move_queue(q1[0], fcfs, &fcfs_length, q1, &q1_length);
-            }
-            else {
-                gantt_chart_update(gantt_chart, &chart_size, q1[0].name, item.duration++);
+                move_queue(fcfs, &fcfs_length, q1, &q1_length);
             }
             continue;
         }
         else if (fcfs_length > 0 && q0_length == 0 && q1_length == 0) {
             item_init(&item, fcfs[0].name, 0);
-            gantt_chart[chart_size] = item;
-            
-            chart_size++;
-
             fcfs[0].burst_time--;
-            item.duration++;
-
+            gantt_chart_update(gantt_chart, &chart_size, fcfs[0].name, 1);
+            
             if (fcfs[0].burst_time == 0) {
                 dequeue(fcfs, &fcfs_length); 
             }
              // tracking chart index
             continue;
         }
+        
     }
 
     // Tips: A simple array is good enough to implement a queue

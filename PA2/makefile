@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c11
+CFLAGS = -Wall -Wextra -std=c99
 
 INPUT_FILES = in01.txt in02.txt in03.txt in04.txt in05.txt
 OUTPUT_FILES = out01.txt out02.txt out03.txt out04.txt out05.txt
